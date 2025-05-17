@@ -94,16 +94,30 @@ def start_feed():
 @app.route('/test-redirect')
 def test_redirect():
     """Test endpoint to verify redirect URL configuration"""
+    # Get all environment variables for debugging
+    env_vars = {
+        'FYERS_REDIRECT_URI': FYERS_REDIRECT_URI,
+        'FYERS_CLIENT_ID': FYERS_CLIENT_ID[:4] + '****' if FYERS_CLIENT_ID else None,
+        'HAS_SECRET_KEY': bool(FYERS_SECRET_KEY),
+        'HAS_TELEGRAM_TOKEN': bool(TELEGRAM_BOT_TOKEN),
+        'HAS_TELEGRAM_CHAT': bool(TELEGRAM_CHAT_ID)
+    }
+    
+    # Construct the expected callback URL
+    expected_callback = f"https://{request.host}/callback"
+    
     return jsonify({
         'status': 'ok',
         'message': 'Redirect URL is accessible',
-        'configured_url': FYERS_REDIRECT_URI,
+        'environment': env_vars,
+        'suggested_redirect_uri': expected_callback,
         'request_info': {
             'scheme': request.scheme,
             'host': request.host,
             'path': request.path,
             'url': request.url,
-            'base_url': request.base_url
+            'base_url': request.base_url,
+            'headers': dict(request.headers)
         }
     })
 
