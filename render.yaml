@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: market-data-server
+    env: python
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: gunicorn render_server:app --config gunicorn_config.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+    healthCheckPath: /
+    autoDeploy: true 

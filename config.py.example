@@ -8,4 +8,4 @@ WEBSOCKET_FEED_URL = "wss://api.fyers.in/socket/v2"
 
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
+TELEGRAM_CHAT_ID = "-1002501251184"
