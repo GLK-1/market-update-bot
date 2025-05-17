@@ -1,0 +1,11 @@
+# Fyers API Credentials
+FYERS_CLIENT_ID = "YOUR_CLIENT_ID"
+FYERS_SECRET_KEY = "YOUR_SECRET_KEY"
+FYERS_REDIRECT_URI = "https://your-app-name.onrender.com/callback"
+
+# WebSocket Configuration
+WEBSOCKET_FEED_URL = "wss://api.fyers.in/socket/v2"
+
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
+TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
