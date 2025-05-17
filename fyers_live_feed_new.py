@@ -7,8 +7,8 @@ import logging
 import asyncio
 import json
 import os
-from config import (
-      FYERS_CLIENT_ID,
+from config import (    
+    FYERS_CLIENT_ID,
     FYERS_SECRET_KEY,
     FYERS_REDIRECT_URI
 )
@@ -24,7 +24,7 @@ class FyersLiveFeed:
     def __init__(self):
         """Initialize FyersLiveFeed instance"""
         # Initialize Telegram bot
-        self.bot = telegram.Bot("AAFpIPXkjVmg3nnKpPN7m5ylB4fhuHkFik4")
+        self.bot = telegram.Bot(token=7702073946:AAFpIPXkjVmg3nnKpPN7m5ylB4fhuHkFik4)
         
         # Initialize Fyers API
         self.client_id = FYERS_CLIENT_ID
