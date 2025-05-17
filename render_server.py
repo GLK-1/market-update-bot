@@ -37,8 +37,20 @@ def health_check():
 def callback():
     """Handle the callback from Fyers authentication"""
     try:
-        # Get the auth code from URL parameters
-        auth_code = request.args.get('auth_code')
+        # Enhanced logging for debugging
+        app.logger.info("Callback endpoint hit")
+        app.logger.info(f"Request args: {dict(request.args)}")
+        app.logger.info(f"Request headers: {dict(request.headers)}")
+        
+        # Get the auth code from multiple possible parameter names
+        auth_code = request.args.get('auth_code') or request.args.get('code') or request.args.get('authCode')
+        
+        # Log the found auth code (masked for security)
+        if auth_code:
+            masked_code = auth_code[:4] + '*' * (len(auth_code) - 4)
+            app.logger.info(f"Found auth code: {masked_code}")
+        else:
+            app.logger.warning("No auth code found in request parameters")
         if auth_code:
             # Save the auth code to a file
             with open('auth_code.txt', 'w') as f:
@@ -78,6 +90,22 @@ def start_feed():
             'status': 'error',
             'message': str(e)
         }), 500
+
+@app.route('/test-redirect')
+def test_redirect():
+    """Test endpoint to verify redirect URL configuration"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Redirect URL is accessible',
+        'configured_url': FYERS_REDIRECT_URI,
+        'request_info': {
+            'scheme': request.scheme,
+            'host': request.host,
+            'path': request.path,
+            'url': request.url,
+            'base_url': request.base_url
+        }
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

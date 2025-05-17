@@ -11,4 +11,4 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 # Fyers API Configuration
 FYERS_CLIENT_ID = os.getenv('FYERS_CLIENT_ID')
 FYERS_SECRET_KEY = os.getenv('FYERS_SECRET_KEY')
-FYERS_REDIRECT_URI = os.getenv('FYERS_REDIRECT_URI', 'https://your-app.onrender.com/callback')
+FYERS_REDIRECT_URI = os.getenv('FYERS_REDIRECT_URI', 'https://market-update-bot.onrender.com/callback')
