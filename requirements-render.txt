@@ -15,3 +15,5 @@ aiohttp==3.7.4  # Using older version with pre-built wheels
 asyncio==3.4.3
 # WebSocket support
 websockets==8.1
+
+werkzeug<1.0.0
