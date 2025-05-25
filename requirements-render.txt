@@ -14,4 +14,4 @@ pytz==2023.3
 aiohttp==3.7.4  # Using older version with pre-built wheels
 asyncio==3.4.3
 # WebSocket support
-websockets==9.0.0
+websockets==8.1
