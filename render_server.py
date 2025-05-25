@@ -3,6 +3,7 @@ import os
 import telegram
 import asyncio
 from dotenv import load_dotenv
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -10,9 +11,9 @@ load_dotenv()
 # Get configuration from environment variables
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-FYERS_CLIENT_ID = os.getenv('FYERS_CLIENT_ID')
-FYERS_SECRET_KEY = os.getenv('FYERS_SECRET_KEY')
-FYERS_REDIRECT_URI = os.getenv('FYERS_REDIRECT_URI')
+UPSTOX_API_KEY = os.getenv('UPSTOX_API_KEY')
+UPSTOX_API_SECRET = os.getenv('UPSTOX_API_SECRET')
+UPSTOX_REDIRECT_URI = os.getenv('UPSTOX_REDIRECT_URI')
 
 app = Flask(__name__)
 bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
@@ -30,62 +31,77 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'telegram_bot': bool(TELEGRAM_BOT_TOKEN),
-        'fyers_config': bool(FYERS_CLIENT_ID and FYERS_SECRET_KEY)
+        'upstox_config': bool(UPSTOX_API_KEY and UPSTOX_API_SECRET)
     })
 
 @app.route('/callback')
 def callback():
-    """Handle the callback from Fyers authentication"""
+    """Handle the callback from Upstox authentication"""
     try:
-        # Enhanced logging for debugging
         app.logger.info("Callback endpoint hit")
         app.logger.info(f"Request args: {dict(request.args)}")
-        app.logger.info(f"Request headers: {dict(request.headers)}")
-        
-        # Get the auth code from multiple possible parameter names
-        auth_code = request.args.get('auth_code') or request.args.get('code') or request.args.get('authCode')
-        
-        # Log the found auth code (masked for security)
-        if auth_code:
-            masked_code = auth_code[:4] + '*' * (len(auth_code) - 4)
-            app.logger.info(f"Found auth code: {masked_code}")
-        else:
-            app.logger.warning("No auth code found in request parameters")
-        if auth_code:
-            # Save the auth code to a file
-            with open('auth_code.txt', 'w') as f:
-                f.write(auth_code)
-            
-            # Send the auth code to your Telegram bot
-            message = f"Auth Code Received: {auth_code}"
-            asyncio.run(bot.send_message(
-                chat_id=TELEGRAM_CHAT_ID,
-                text=message
-            ))
-            return "Authentication successful! The auth code has been sent to your Telegram bot. You can close this window."
-        else:
+
+        # Get the auth code from the request
+        auth_code = request.args.get('code')
+        if not auth_code:
             return "No auth code received", 400
+
+        # Exchange auth code for access token
+        token_url = "https://api.upstox.com/login/oauth/token"
+        payload = {
+            'client_id': UPSTOX_API_KEY,
+            'client_secret': UPSTOX_API_SECRET,
+            'grant_type': 'authorization_code',
+            'code': auth_code,
+            'redirect_uri': UPSTOX_REDIRECT_URI
+        }
+        response = requests.post(token_url, data=payload)
+        if response.status_code != 200:
+            return f"Error fetching access token: {response.text}", 500
+
+        access_token = response.json().get('access_token')
+        if not access_token:
+            return "Access token not found in response", 500
+
+        # Save the access token to a file
+        with open('access_token.txt', 'w') as f:
+            f.write(access_token)
+
+        # Send the access token to your Telegram bot
+        message = f"Access Token Received: {access_token[:4]}****"
+        asyncio.run(bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message
+        ))
+        return "Authentication successful! The access token has been sent to your Telegram bot. You can close this window."
     except Exception as e:
         return f"Error processing callback: {str(e)}", 500
 
 @app.route('/start')
 def start_feed():
-    """Start the market data feed"""
-    
+    """Start the market data feed using Upstox"""
     try:
-        from fyers_live_feed import FyersLiveFeed
-        feed = FyersLiveFeed()
-        if feed.authenticate():
-            feed.start_streaming()
-            return jsonify({
-                'status': 'success',
-                'message': 'Market data feed started successfully'
-            })
-        else:
-            return jsonify({
-                'status': 'error',
-                'message': 'Authentication failed'
-            }), 400
+        with open('access_token.txt', 'r') as f:
+            access_token = f.read().strip()
+
+        # Fetch market data (example: NIFTY 50 index)
+        market_data_url = "https://api.upstox.com/marketdata/quotes"
+        headers = {
+            'Authorization': f'Bearer {access_token}'
+        }
+        params = {
+            'exchange': 'NSE',
+            'symbol': 'NIFTY 50'
+        }
+        response = requests.get(market_data_url, headers=headers, params=params)
+        if response.status_code != 200:
+            return f"Error fetching market data: {response.text}", 500
+
+        market_data = response.json()
+        return jsonify({
+            'status': 'success',
+            'market_data': market_data
+        })
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -97,15 +113,15 @@ def test_redirect():
     """Test endpoint to verify redirect URL configuration"""
     # Get all environment variables for debugging
     env_vars = {
-        'FYERS_REDIRECT_URI': FYERS_REDIRECT_URI,
-        'FYERS_CLIENT_ID': FYERS_CLIENT_ID[:4] + '****' if FYERS_CLIENT_ID else None,
-        'HAS_SECRET_KEY': bool(FYERS_SECRET_KEY),
+        'UPSTOX_REDIRECT_URI': UPSTOX_REDIRECT_URI,
+        'UPSTOX_API_KEY': UPSTOX_API_KEY[:4] + '****' if UPSTOX_API_KEY else None,
+        'HAS_API_SECRET': bool(UPSTOX_API_SECRET),
         'HAS_TELEGRAM_TOKEN': bool(TELEGRAM_BOT_TOKEN),
         'HAS_TELEGRAM_CHAT': bool(TELEGRAM_CHAT_ID)
     }
     
     # Construct the expected callback URL
-    expected_callback = f"https://{request.host}/callback"
+    expected_callback = "https://market-update-bot.onrender.com/callback"
     
     return jsonify({
         'status': 'ok',

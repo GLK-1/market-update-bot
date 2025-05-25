@@ -7,6 +7,7 @@ import logging
 import asyncio
 import json
 import os
+import requests
 from config import (
       FYERS_CLIENT_ID,
     FYERS_SECRET_KEY,
@@ -20,17 +21,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class FyersLiveFeed:
+class UpstoxLiveFeed:
     def __init__(self):
-        """Initialize FyersLiveFeed instance"""
+        """Initialize UpstoxLiveFeed instance"""
         # Initialize Telegram bot
         self.bot = telegram.Bot("AAFpIPXkjVmg3nnKpPN7m5ylB4fhuHkFik4")
         
-        # Initialize Fyers API
-        self.client_id = FYERS_CLIENT_ID
-        self.secret_key = FYERS_SECRET_KEY
-        self.redirect_uri = FYERS_REDIRECT_URI
-        self.fyers = None
+        # Upstox API credentials
+        self.api_key = os.getenv('UPSTOX_API_KEY')
+        self.api_secret = os.getenv('UPSTOX_API_SECRET')
+        self.redirect_uri = os.getenv('UPSTOX_REDIRECT_URI')
         self.access_token = None
         
         # Initialize data storage
@@ -42,51 +42,42 @@ class FyersLiveFeed:
             os.makedirs('logs')
     
     def authenticate(self):
-        """Handle Fyers authentication"""
+        """Handle Upstox authentication"""
         try:
-            session = accessToken.SessionModel(
-                client_id=self.client_id,
-                secret_key=self.secret_key,
-                redirect_uri=self.redirect_uri,
-                response_type="code",
-                grant_type="authorization_code"
-            )
-            
-            # Generate and open auth URL
-            auth_url = session.generate_authcode()
-            logger.info("Login to Fyers and authorize the application...")
+            auth_url = f"https://api.upstox.com/login/oauth/authorize?client_id={self.api_key}&response_type=code&redirect_uri={self.redirect_uri}"
             logger.info(f"Login URL: {auth_url}")
-            
+
             # Wait for auth_code.txt to be created by callback server
             while not os.path.exists('auth_code.txt'):
                 logger.info("Waiting for authentication...")
                 import time
                 time.sleep(2)
-            
+
             # Read the auth code from file
             with open('auth_code.txt', 'r') as f:
                 auth_code = f.read().strip()
-            
+
             # Delete the file after reading
             os.remove('auth_code.txt')
-            
-            session.set_token(auth_code)
-            self.access_token = session.generate_token()["access_token"]
-            
-            # Initialize Fyers model
-            self.fyers = fyersModel.FyersModel(
-                client_id=self.client_id, 
-                token=self.access_token,
-                log_path="logs/"
-            )
-            
+
+            token_url = "https://api.upstox.com/login/oauth/token"
+            payload = {
+                'client_id': self.api_key,
+                'client_secret': self.api_secret,
+                'grant_type': 'authorization_code',
+                'code': auth_code,
+                'redirect_uri': self.redirect_uri
+            }
+            response = requests.post(token_url, data=payload)
+            response.raise_for_status()
+
+            self.access_token = response.json().get('access_token')
             logger.info("Authentication successful!")
             return True
-            
         except Exception as e:
             logger.error(f"Authentication failed: {str(e)}")
             return False
-    
+
     def get_nifty50_symbols(self):
         """Get NIFTY 50 symbols and format them for Fyers API"""
         try:
@@ -208,50 +199,22 @@ Volume: {market_depth['volume']:,}
             }
 
     def start_streaming(self):
-        """Start WebSocket connection"""
+        """Start fetching market data"""
         try:
-            # Get symbols to subscribe
-            symbols = self.get_nifty50_symbols()
-            if not symbols:
-                logger.error("No symbols to subscribe to")
-                return
-            
-            # Initialize WebSocket connection
-            data_type = "symbolData"
-            ws_access_token = f"{self.client_id}:{self.access_token}"
-            
-            def on_connect():
-                logger.info("Connected to Fyers WebSocket")
-                
-            def on_message(message):
-                self.process_message(message)
-                
-            def on_error(error):
-                logger.error(f"WebSocket error: {error}")
-                
-            def on_close():
-                logger.warning("WebSocket connection closed")
-                self.reconnect()
-                
-            # Create WebSocket client
-            self.ws = ws.FyersSocket(
-                access_token=ws_access_token,
-                run_background=True,
-                log_path="logs/"
-            )
-            
-            # Set callbacks
-            self.ws.on_connect = on_connect
-            self.ws.on_message = on_message
-            self.ws.on_error = on_error
-            self.ws.on_close = on_close
-            
-            # Subscribe to symbols
-            self.ws.subscribe(symbols=symbols, data_type=data_type)
-            self.ws.keep_running()
-            
+            symbols = ["NSE:NIFTY50", "NSE:BANKNIFTY"]
+            self.subscribed_symbols = symbols
+
+            market_data_url = "https://api.upstox.com/marketdata/quotes"
+            headers = {'Authorization': f'Bearer {self.access_token}'}
+
+            for symbol in symbols:
+                params = {'exchange': 'NSE', 'symbol': symbol}
+                response = requests.get(market_data_url, headers=headers, params=params)
+                response.raise_for_status()
+                data = response.json()
+                logger.info(f"Market data for {symbol}: {data}")
         except Exception as e:
-            logger.error(f"Error starting WebSocket: {str(e)}", exc_info=True)
+            logger.error(f"Error fetching market data: {str(e)}")
 
     def reconnect(self):
         """Attempt to reconnect WebSocket"""
@@ -276,7 +239,7 @@ Volume: {market_depth['volume']:,}
 def main():
     """Main entry point of the application"""
     try:
-        feed = FyersLiveFeed()
+        feed = UpstoxLiveFeed()
         if feed.authenticate():
             feed.start_streaming()
             
