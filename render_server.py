@@ -71,6 +71,7 @@ def callback():
 @app.route('/start')
 def start_feed():
     """Start the market data feed"""
+    
     try:
         from fyers_live_feed import FyersLiveFeed
         feed = FyersLiveFeed()

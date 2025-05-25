@@ -1,9 +1,12 @@
-fyers-apiv2>=2.0.7
-websocket-client>=1.6.1
-python-telegram-bot>=20.3
+# Core requirements
+fyers-apiv2==2.0.7
+requests==2.25.1  # Required by fyers-apiv2
+websocket-client==1.2.1  # Required by fyers-apiv2
+python-telegram-bot==20.3
+python-dotenv==1.0.0
+pytz==2023.3
+aiohttp==3.8.0
+asyncio==3.4.3
+
+# Additional dependencies
 protobuf>=4.21.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-pytz>=2023.3
-aiohttp>=3.8.0
-asyncio>=3.4.3

@@ -7,10 +7,13 @@ import logging
 import asyncio
 import json
 import os
+import time
 from config import (    
     FYERS_CLIENT_ID,
     FYERS_SECRET_KEY,
-    FYERS_REDIRECT_URI
+    FYERS_REDIRECT_URI,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID
 )
 
 # Configure logging
@@ -24,26 +27,30 @@ class FyersLiveFeed:
     def __init__(self):
         """Initialize FyersLiveFeed instance"""
         # Initialize Telegram bot
-        self.bot = telegram.Bot(token=7702073946:AAFpIPXkjVmg3nnKpPN7m5ylB4fhuHkFik4)
-        
+        self.bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
         # Initialize Fyers API
         self.client_id = FYERS_CLIENT_ID
         self.secret_key = FYERS_SECRET_KEY
         self.redirect_uri = FYERS_REDIRECT_URI
         self.fyers = None
         self.access_token = None
-        
         # Initialize data storage
         self.last_prices = {}
         self.subscribed_symbols = []
-        
         # Set up logging directory
         if not os.path.exists('logs'):
             os.makedirs('logs')
-    
+
     def authenticate(self):
         """Handle Fyers authentication"""
         try:
+            print(f"DEBUG: Using client_id: {self.client_id}")  # Debug print
+            logger.info(f"Authenticating with Fyers using client ID: {self.client_id}")
+            
+            # Ensure client_id is properly formatted (should be in format: XY00000)
+            if not self.client_id:
+                raise ValueError("FYERS_CLIENT_ID is not set")
+                
             session = accessToken.SessionModel(
                 client_id=self.client_id,
                 secret_key=self.secret_key,
