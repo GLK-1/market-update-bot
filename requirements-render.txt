@@ -1,5 +1,5 @@
 # Web server requirements
-flask==2.0.0
+flask==2.2.5
 gunicorn==20.0.0
 
 # API and bot requirements
@@ -15,5 +15,3 @@ aiohttp==3.7.4  # Using older version with pre-built wheels
 asyncio==3.4.3
 # WebSocket support
 websockets==8.1
-
-werkzeug<1.0.0
